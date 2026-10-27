@@ -1,0 +1,4 @@
+sourcedId,status,dateLastModified,name,type,identifier,parentSourcedId
+district_b-org,active,2026-10-26T00:00:00Z,Riverside County Schools,district,district_b,
+district_b-school-1,active,2026-10-26T00:00:00Z,Guerrero Middle School,school,district_b-S1,district_b-org
+district_b-school-2,active,2026-10-26T00:00:00Z,Anderson Elementary,school,district_b-S2,district_b-org

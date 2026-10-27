@@ -1,0 +1,9 @@
+sourcedId,status,dateLastModified,title,classCode,classType,schoolSourcedId
+district_a-class-1-1,active,2026-10-26T00:00:00Z,Math,MATH-11,scheduled,district_a-school-1
+district_a-class-1-2,active,2026-10-26T00:00:00Z,English,ENGL-12,scheduled,district_a-school-1
+district_a-class-1-3,active,2026-10-26T00:00:00Z,Science,SCIE-13,scheduled,district_a-school-1
+district_a-class-1-4,active,2026-10-26T00:00:00Z,History,HIST-14,scheduled,district_a-school-1
+district_a-class-2-1,active,2026-10-26T00:00:00Z,Math,MATH-21,scheduled,district_a-school-2
+district_a-class-2-2,active,2026-10-26T00:00:00Z,English,ENGL-22,scheduled,district_a-school-2
+district_a-class-2-3,active,2026-10-26T00:00:00Z,Science,SCIE-23,scheduled,district_a-school-2
+district_a-class-2-4,active,2026-10-26T00:00:00Z,History,HIST-24,scheduled,district_a-school-2
