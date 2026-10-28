@@ -43,7 +43,7 @@ Dashed boxes are planned and not built yet. Presidio is used only in the scoring
 | FastAPI with OAuth | Planned |
 | Roster Doctor agent | Planned |
 | Tests and GitHub Actions | Planned |
-| AWS architecture diagram and demo recording | Planned |
+| Demo recording | Planned |
 
 ## Run it yourself
 
