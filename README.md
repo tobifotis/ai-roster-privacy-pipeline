@@ -2,7 +2,7 @@
 
 AI-powered pipeline that redacts student PII from OneRoster data before it reaches third-party apps.
 
-> Status: in progress (Day 2 of 5). All data in this repo is synthetic. No real students or real personal information is used.
+> Status: in progress (Day 2 of 5 complete). All data in this repo is synthetic. No real students or real personal information is used.
 
 ## The problem
 
@@ -26,8 +26,8 @@ flowchart LR
 | --- | --- |
 | Synthetic OneRoster data generator | Done |
 | PostgreSQL with Podman or Docker Compose | Done |
-| Database models and Alembic migrations | In progress |
-| CSV loader with one tenant per district | In progress |
+| Database models and Alembic migrations | Done |
+| CSV loader with one tenant per district | Done |
 | Privacy step (rules, Claude Haiku, Presidio) | Planned |
 | FastAPI with OAuth | Planned |
 | Roster Doctor agent | Planned |
@@ -45,11 +45,13 @@ uv pip install -r requirements.txt
 
 podman-compose up -d          # or: docker compose up -d
 python app/generate_synthetic_data.py
+alembic upgrade head          # create the tables
+python -m app.load_data       # load both districts
 ```
 
 ## Synthetic data
 
-`app/generate_synthetic_data.py` writes two fake school districts to `data/` in a simplified OneRoster CSV layout. `notes.csv` holds free-text teacher notes with names, phones, and addresses hidden inside, plus a `pii_labels` column that lists the private details. That column is the answer key for scoring the privacy step.
+`app/generate_synthetic_data.py` writes two synthetic school districts to `data/` in a simplified OneRoster CSV layout. `notes.csv` holds free-text teacher notes with names, phones, and addresses hidden inside, plus a `pii_labels` column that lists the private details. That column is the answer key for scoring the privacy step.
 
 ## Results
 
