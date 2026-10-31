@@ -93,3 +93,11 @@ class Note(Base):
     text: Mapped[str] = mapped_column(Text)
     text_redacted: Mapped[str | None] = mapped_column(Text)  # cleaned copy, filled by a script
     pii_labels: Mapped[str] = mapped_column(Text)  # JSON list, the answer key for scoring
+
+class ApiClient(Base):
+    """An app that is allowed to log in to the API. Only a hash of its secret is stored."""
+    __tablename__ = "api_clients"
+    client_id: Mapped[str] = mapped_column(String(100), primary_key=True)
+    tenant_id: Mapped[str] = mapped_column(String(50))  # the one district this app may read
+    name: Mapped[str] = mapped_column(String(200))
+    secret_hash: Mapped[str] = mapped_column(String(64))  # SHA-256 of the secret, as hex
