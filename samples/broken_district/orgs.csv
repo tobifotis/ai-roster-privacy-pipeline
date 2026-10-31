@@ -1,0 +1,4 @@
+sourcedId,status,dateLastModified,name,type,identifier,parentSourcedId
+district_a-org,active,2026-10-26T00:00:00Z,Lincoln Unified School District,district,district_a,
+district_a-school-1,active,2026-10-26T00:00:00Z,Fowler High School,school,district_a-S1,district_a-org
+district_a-school-2,active,2026-10-26T00:00:00Z,Gomez High School,school,district_a-S2,district_a-org
