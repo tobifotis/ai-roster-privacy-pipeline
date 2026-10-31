@@ -91,4 +91,5 @@ class Note(Base):
     note_id: Mapped[str] = mapped_column(String(100), primary_key=True)
     student_sourced_id: Mapped[str] = mapped_column(String(100))
     text: Mapped[str] = mapped_column(Text)
+    text_redacted: Mapped[str | None] = mapped_column(Text)  # cleaned copy, filled by a script
     pii_labels: Mapped[str] = mapped_column(Text)  # JSON list, the answer key for scoring
