@@ -11,6 +11,7 @@ names of students, parents or teachers, phone numbers, email addresses,
 home addresses, and birthdates. Do NOT list school subjects, days of the
 week, or ordinary words.
 Copy each item exactly as written in the note.
+Do not include possessive endings such as 's in an item.
 Reply with only a JSON list of strings, like ["Maria Lopez", "817-555-1234"].
 If there is nothing private, reply with [].
 
