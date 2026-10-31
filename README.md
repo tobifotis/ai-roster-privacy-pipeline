@@ -14,7 +14,7 @@ This project is a small version of that flow. It loads synthetic OneRoster stude
 
 ## Architecture
 
-```mermaid
+<!-- ```mermaid
 flowchart LR
     A["OneRoster CSV files (synthetic)"] --> B["Loader<br/>SQLAlchemy + Alembic"]
     B --> C[("PostgreSQL<br/>tenant_id on every table")]
@@ -25,7 +25,10 @@ flowchart LR
     A -. "checked before loading" .-> G["Roster Doctor<br/>inspector finds problems,<br/>Claude explains them"]
     G <--> X
     G --> H["Human approves or rejects<br/>(decision is logged, no data changes)"]
-```
+``` -->
+
+![Architecture diagram](docs/architecture.png)
+
 
 Presidio is used only in the scoring comparison, not in the pipeline.
 
