@@ -14,19 +14,6 @@ This project is a small version of that flow. It loads synthetic OneRoster stude
 
 ## Architecture
 
-<!-- ```mermaid
-flowchart LR
-    A["OneRoster CSV files (synthetic)"] --> B["Loader<br/>SQLAlchemy + Alembic"]
-    B --> C[("PostgreSQL<br/>tenant_id on every table")]
-    C --> D["Privacy step<br/>rules, then Claude Haiku"]
-    D --> E["FastAPI<br/>OAuth token required"]
-    E --> F["Pretend learning app"]
-    D <--> X["Claude API"]
-    A -. "checked before loading" .-> G["Roster Doctor<br/>inspector finds problems,<br/>Claude explains them"]
-    G <--> X
-    G --> H["Human approves or rejects<br/>(decision is logged, no data changes)"]
-``` -->
-
 ![Architecture diagram](docs/architecture.png)
 
 
