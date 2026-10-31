@@ -1,0 +1,44 @@
+name: Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    # a throwaway PostgreSQL that lives only while the tests run
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: roster
+          POSTGRES_PASSWORD: roster_dev_pw
+          POSTGRES_DB: roster_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U roster"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    steps:
+      - name: Get the code
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install the project
+        # the tests do not use the 400 MB spaCy language model, so skip it
+        run: |
+          grep -v "en-core-web-lg" requirements.txt > ci-requirements.txt
+          pip install -r ci-requirements.txt
+
+      - name: Run the tests
+        run: pytest -v
