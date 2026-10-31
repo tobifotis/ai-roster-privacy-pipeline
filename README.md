@@ -4,13 +4,13 @@
 
 AI-powered pipeline that redacts student PII from OneRoster data before it reaches third-party apps.
 
-**Status:** in progress (Day 4 of 5 complete)
+**Status:** all pieces built (Day 5 of 5). Demo recording is next.
 
 ## The problem
 
 Schools keep student records in a system like PowerSchool. Learning apps like IXL need some of that data, but not the private parts. Teacher notes are the hard case: a note like "Maria's mom Sarah called about the bus" has a student name, a parent name, and sometimes a phone number or home address buried in free text.
 
-This project is a small version of that flow. It loads synthetic OneRoster student data into PostgreSQL (one separate tenant per district), hides private details before the data reaches a pretend learning app, and serves the cleaned data through an API that requires an OAuth login. When a roster file fails to load, an AI agent called Roster Doctor explains why and suggests a fix, but a human approves any change.
+This project is a small version of that flow. It loads synthetic OneRoster student data into PostgreSQL (one separate tenant per district), hides private details before the data reaches a pretend learning app, and serves the cleaned data through an API that requires an OAuth login. Before a roster file is loaded, an AI agent called Roster Doctor checks it, explains any problems in plain English, and suggests a fix, but a human approves any change and the agent can never edit data itself.
 
 ## Architecture
 
@@ -22,15 +22,12 @@ flowchart LR
     D --> E["FastAPI<br/>OAuth token required"]
     E --> F["Pretend learning app"]
     D <--> X["Claude API"]
-    B -. "load fails" .-> G["Roster Doctor agent<br/>explains and suggests a fix"]
+    A -. "checked before loading" .-> G["Roster Doctor<br/>inspector finds problems,<br/>Claude explains them"]
     G <--> X
-    G --> H["Human approves or rejects the fix"]
-
-    classDef planned stroke-dasharray: 5 5
-    class F,G,H planned
+    G --> H["Human approves or rejects<br/>(decision is logged, no data changes)"]
 ```
 
-Dashed boxes are planned and not built yet. Presidio is used only in the scoring comparison, not in the pipeline.
+Presidio is used only in the scoring comparison, not in the pipeline.
 
 ## Build status
 
@@ -46,7 +43,8 @@ Dashed boxes are planned and not built yet. Presidio is used only in the scoring
 | OAuth 2.0 client credentials login with signed tokens | Done |
 | Tests (pytest) and GitHub Actions | Done |
 | Live redaction demo command | Done |
-| Roster Doctor agent | Planned |
+| Pretend learning app | Done |
+| Roster Doctor agent (inspector, Claude explainer, human approval) | Done |
 | Demo recording | Planned |
 
 ## Run it yourself
@@ -113,6 +111,27 @@ curl -s -H "Authorization: Bearer $TOKEN" localhost:8000/tenants/district_a/stud
 
 An unknown district returns 403, not 404, so an app cannot discover which districts exist. FastAPI also serves a live, clickable page at `http://localhost:8000/docs`.
 
+### The pretend learning app
+
+`app/pretend_app.py` plays the part of a customer app. It logs in, gets a token, and asks for its district's roster, exactly as a real app would. With the API running and `PRETEND_APP_SECRET` set:
+
+```bash
+python -m app.pretend_app
+```
+
+```
+Logged in as pretend-learning-app. Token received (valid for 1 hour).
+
+Received 80 students for district_a. First three:
+
+  district_a-student-1-001  grades=6  classes=3
+      note: Please call [PII] at [PHONE] about [PII]'s absence.
+  district_a-student-1-002  grades=2  classes=3
+      note: Reminder: library books are due Friday.
+  district_a-student-1-003  grades=2  classes=3
+      note: [PII]'s mom [PII] called about the bus.
+```
+
 ## Live demo
 
 ```bash
@@ -121,6 +140,38 @@ python -m app.demo_redact "Please call Maria Lopez at 817-555-1234 about her son
 
 python -m app.demo_redact   # type notes at the prompt
 ```
+
+## Roster Doctor
+
+When a roster file is wrong, the loader stops with a message like `Invalid isoformat string` and no row number. Roster Doctor is the agent that turns a problem like that into something a school office worker can act on. It has two halves, kept apart on purpose:
+
+1. **The inspector** (`app/roster_check.py`) is plain code with no AI. It reads the CSV files before anything is loaded and lists every problem with the file, the spreadsheet row, the column, and the value. Because plain code decides what is wrong, the agent cannot invent problems.
+2. **The explainer** (`app/roster_doctor.py`) sends only the inspector's list to Claude Haiku (IDs and dates, never names or emails) and asks for a plain-English explanation and one suggested fix per problem. If Claude's reply is not a clean list with one answer per problem, nothing is shown (fail closed).
+
+A person then answers `y` or `n` for each suggestion. The only thing the Doctor ever writes is one line per decision in `logs/doctor_decisions.jsonl`. It has no code that edits a CSV file or the database, so a person makes any approved fix by hand.
+
+To try it, make a practice copy of district A with two planted mistakes (a date written 08/15/2026, and an enrollment pointing to a student who does not exist), then run the Doctor (needs `ANTHROPIC_API_KEY`):
+
+```bash
+python -m app.make_broken_sample
+python -m app.roster_doctor
+```
+
+```
+samples/broken_district: 2 problem(s) found by the inspector.
+
+enrollments.csv row 2, beginDate = '08/15/2026'
+  What happened: The start date in row 2 is written as month/day/year, but the file needs year-month-day. The checker cannot read it in the required format.
+  Suggested fix: In enrollments.csv row 2, change the beginDate from 08/15/2026 to 2026-08-15.
+  Approve this suggestion? [y/n]
+
+enrollments.csv row 3, userSourcedId = 'district_a-student-9-999'
+  What happened: Row 3 refers to a student ID that does not appear in users.csv, so the system cannot match the enrollment to a person. The ID may have a typo, or the student may be missing from the users file.
+  Suggested fix: Search users.csv for the student's name, compare the ID there with 'district_a-student-9-999' in row 3 and correct any typo, or add the missing student to users.csv if they are not listed.
+  Approve this suggestion? [y/n]
+```
+
+Claude did not guess the missing student's ID. It told the reader what to check instead.
 
 ## Tests
 
@@ -131,11 +182,11 @@ podman exec -it ai-roster-privacy-pipeline_db_1 psql -U roster -d roster -c "CRE
 pytest -v
 ```
 
-The 34 tests cover login, token checks (missing, garbage, forged, expired, wrong scope), district separation, the privacy guarantees of the API, and the phone, email, and date rules. They run against a real PostgreSQL database named `roster_test`, which is erased and rebuilt from the Alembic migrations on every run, and a safety guard refuses to erase any database whose name does not end in `_test`. The tests never call Claude, so they are free, fast, and give the same answer every time. GitHub Actions runs them on every push, with a throwaway PostgreSQL started for the job.
+The 53 tests cover login, token checks (missing, garbage, forged, expired, wrong scope), district separation, the privacy guarantees of the API, the phone, email, and date rules, and Roster Doctor (the inspector, replies from a fake Claude including unusable ones, and the human approval step). The API tests run against a real PostgreSQL database named `roster_test`, which is erased and rebuilt from the Alembic migrations on every run, and a safety guard refuses to erase any database whose name does not end in `_test`. The tests never call Claude, so they are free, fast, and give the same answer every time. GitHub Actions runs them on every push, with a throwaway PostgreSQL started for the job.
 
 ## Synthetic data
 
-All data is synthetic, generated with Faker using a fixed seed (42), so every run produces the same files. There are two districts, each with 3 orgs, 88 users (8 teachers and 80 students), 8 classes, 248 enrollments, and 80 teacher notes. The CSVs follow a simplified OneRoster layout. `notes.csv` is not part of OneRoster. It holds free-text notes plus a `pii_labels` column, an answer key that lists the private details in each note and is used for scoring.
+All data is synthetic, generated with Faker using a fixed seed (42), so every run produces the same files. There are two districts, each with 3 orgs, 88 users (8 teachers and 80 students), 8 classes, 248 enrollments, and 80 teacher notes. The CSVs follow a simplified OneRoster layout. `notes.csv` is not part of OneRoster. It holds free-text notes plus a `pii_labels` column, an answer key that lists the private details in each note and is used for scoring. `samples/broken_district` is a deliberately broken copy of district A used to practice Roster Doctor, kept outside `data/` so the normal loader never reads it.
 
 ## Results
 
@@ -161,10 +212,9 @@ Run it yourself: `python -m app.score_llm 160` (needs an `ANTHROPIC_API_KEY` env
 - Scores come from template-generated notes and will be lower on real, messier notes.
 - Tokens are signed with one shared key (HS256) and cannot be revoked before they expire in one hour. A production system would use asymmetric keys and an identity provider.
 - The cleaned notes are made once and saved. If the cleaning rules or the prompt change, `app.redact_notes` has to be run again on the notes it already cleaned.
+- Roster Doctor's inspector checks two kinds of problems in `enrollments.csv` (dates in the wrong format and enrollments that point to a person who is not in `users.csv`). It is run by hand and is not yet wired into the loader, and it only checks enrollments so far. Other files and other kinds of problems would need more checks.
+- Roster Doctor records decisions but does not apply fixes. A person edits the files.
 
-## How I built this with AI
-
-Coming soon.
 
 ## License
 
